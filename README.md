@@ -12,7 +12,7 @@ You will need to create an App Registration with Microsoft Azure. Follow the ins
 3. Take note of your Azure tenant ID, the app ID and the app secret (store this somewhere safe: if you lose it, you will have to generate a new one and break any pre-existing connections with this app)
 4. Clone this repo to your location machine. Navigate to `config/.env` and paste your tenant ID, app ID and app secret in the appropriate fields
 <h1>pip installs</h1>
-The only package required to be installed is `dotenv`, a Python module that assists with the secure handling of API keys, application secret keys, etc.
+The only package required to be installed is `dotenv`, a Python module that assists with the secure handling of API keys, application secret keys, etc.<br>
 1. `pip install python-dotenv`
 # TODO
 1. Clean-up the final API response to only show relevant fields to the user
