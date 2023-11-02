@@ -1,9 +1,7 @@
 from datetime import datetime
 import json
 import requests
-
-# TODO: Allow users to upload .csv file of hostnames OR IP addresses to offboard
-machines_to_offboard = ['<HOSTNAME HERE>']
+import csv
 
 
 class Header:
@@ -48,10 +46,10 @@ def aad_token():
     tenant_id = ""
     app_id = ""
     app_secret = ""
-    url = f""
-    resourceAppIdUri = 'https://api-us.securitycenter.microsoft.com'
+    url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/token"
+    resource_app_id_uri = 'https://api-us.securitycenter.microsoft.com'
     body = {
-        'resource': resourceAppIdUri,
+        'resource': resource_app_id_uri,
         'client_id': app_id,
         'client_secret': app_secret,
         'grant_type': 'client_credentials'
@@ -63,26 +61,27 @@ def aad_token():
     return json_response['access_token']
 
 
-def get_machine_id(aad_token):
+def get_machine_id(entra_token):
     ids_to_offboard = []
 
     url = 'https://api-us.securitycenter.microsoft.com/api/machines'
     headers = {
         'Content-Type': 'application/json',
-        'Authorization': "Bearer " + aad_token
+        'Authorization': "Bearer " + entra_token
     }
     req = requests.get(url, headers=headers)
     response = req.text
     json_response = json.loads(response)
 
     for i in json_response['value']:
-        for k in machines_to_offboard:
+        for k in strfilter:
             if k in str(i['computerDnsName']):
                 ids_to_offboard.append(i['id'])
     return ids_to_offboard
 
 
 def offboard():
+    initials = input("Enter your initials to claim responsibility for this action: ")
     bearer_token = aad_token()
     machine_id_list = get_machine_id(bearer_token)
     eastern_dt = datetime.now()
@@ -91,7 +90,7 @@ def offboard():
         'Authorization': "Bearer " + bearer_token
     }
     body = {
-        "Comment": f"Offboarded machine by automation at {eastern_dt}."
+        "Comment": f"Offboarded machine by automation at {eastern_dt}. {initials}."
     }
     for j in machine_id_list:
         url = f'https://api-us.securitycenter.windows.com/api/machines/{j}/offboard'
@@ -102,6 +101,17 @@ def offboard():
 
 
 if __name__ == "__main__":
+    machines_to_offboard = []
+    with open("devices.csv", "r") as hosts:
+        reader = csv.reader(hosts, delimiter=',')
+        next(reader, None)  # skips the headers
+        for row in reader:
+            machines_to_offboard.append(row[1])
+
+    strfilter = list(filter(None, machines_to_offboard))
+    print("Attempting to offboard the following machines:")
+    for k in strfilter:
+        print(f"\t- {k}")
     new_token = aad_token()
     print(get_machine_id(new_token))
     offboard()
