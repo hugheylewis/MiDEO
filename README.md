@@ -16,3 +16,7 @@ You will need to create an App Registration with Microsoft Azure. Follow the ins
 <h1>pip installs</h1>
 The only package required to be installed is `dotenv`, a Python module that assists with the secure handling of API keys, application secret keys, etc.<br>
 &#96;pip install python-dotenv&#96;
+
+# Roadmap / TODO
+1. Create SQLite database to store all offboarded machines
+2. GUI
