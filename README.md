@@ -1,8 +1,9 @@
 # mde-offboarder
 A Python script to automate the offboarding of devices from Microsoft Defender for Endpoint (MDE)
 
-This implementation currently only supports the offboarding of a single device at a time. Future revisions of this script will allow multiple devices - either manually entered by the user or uploaded via CSV file - to be offboarded at a time.
+This implementation currently takes an exported CSV file from Defender for Endpoint (security.microsoft.com) as the input and will offboard <b>all machines in that file</b>.
+*** It is important to leave the columns of the CSV file as-is. main.py is expecting to read the list of device IDs and hostnames from columns 0 and 1, respectively.
+
 
 # TODO
-1. Allow users to upload .csv file of hostnames or IP addresses of machines to offboard.
-2. Clean-up the final API response to only show relevant fields to the user
+1. Clean-up the final API response to only show relevant fields to the user
