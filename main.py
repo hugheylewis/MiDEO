@@ -46,8 +46,8 @@ def aad_token():
     tenant_id = ""
     app_id = ""
     app_secret = ""
-    url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/token"
-    resource_app_id_uri = 'https://api-us.securitycenter.microsoft.com'
+    url = f""
+    resource_app_id_uri = ''
     body = {
         'resource': resource_app_id_uri,
         'client_id': app_id,
@@ -92,12 +92,24 @@ def offboard():
     body = {
         "Comment": f"Offboarded machine by automation at {eastern_dt}. {initials}."
     }
-    for j in machine_id_list:
-        url = f'https://api-us.securitycenter.windows.com/api/machines/{j}/offboard'
-        req = requests.post(url, headers=headers, json=body)
-        response = req.text
-        json_response = json.loads(response)
-        print(json_response)
+    if not machine_id_list:
+        with open('devices.csv', 'r') as dfile:
+            csv_reader = csv.reader(dfile)
+            for index, row in enumerate(csv_reader):
+                if index == 1:
+                    # TODO: Iterate through entire Device ID column on CSV file, not just first cell (which is what row[0] does)
+                    url = f'https://api-us.securitycenter.windows.com/api/machines/{row[0]}/offboard'
+                    req = requests.post(url, headers=headers, json=body)
+                    response = req.text
+                    json_response = json.loads(response)
+                    print(json_response)
+    else:
+        for mid in machine_id_list:
+            url = f'https://api-us.securitycenter.windows.com/api/machines/{mid}/offboard'
+            req = requests.post(url, headers=headers, json=body)
+            response = req.text
+            json_response = json.loads(response)
+            print(json_response)
 
 
 if __name__ == "__main__":
