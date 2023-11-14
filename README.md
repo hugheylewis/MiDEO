@@ -20,3 +20,4 @@ The only package required to be installed is `dotenv`, a Python module that assi
 # Roadmap / TODO
 1. Create SQLite database to store all offboarded machines
 2. GUI
+3. Azure Key Vault to replace config.py and .env files (used only for local script execution)
