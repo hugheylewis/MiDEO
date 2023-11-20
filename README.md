@@ -2,7 +2,8 @@
 A Python script to automate the offboarding of devices from Microsoft Defender for Endpoint (MDE)
 
 This implementation currently takes an exported CSV file from Defender for Endpoint (security.microsoft.com) as the input and will offboard <b>all machines in that file</b>.<br>
-*** It is important to leave the columns and the format of the CSV file as-is. main.py is expecting to read the list of device IDs and hostnames from columns 0 and 1, respectively. Rows can be removed as needed.***
+The offboarded devices are then inserted into a SQLite database, stored in the current working directory.<br>
+*** It is important to leave the columns and the format of the CSV file from Defender as-is. main.py is expecting to read the list of device IDs and hostnames from columns 0 and 1, respectively. Rows, however, can be removed as needed to prevent offboarding specific endpoints.***
 
 # Getting Started
 <h1>Azure App Registration</h1>
@@ -18,6 +19,5 @@ The only package required to be installed is `dotenv`, a Python module that assi
 &#96;pip install python-dotenv&#96;
 
 # Roadmap / TODO
-1. Create SQLite database to store all offboarded machines
-2. GUI
-3. Azure Key Vault to replace config.py and .env files (used only for local script execution)
+1.  GUI
+2.  Azure Key Vault to replace config.py and .env files (used only for local script execution)
