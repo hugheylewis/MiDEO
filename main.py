@@ -3,6 +3,13 @@ from config import config
 import json
 import requests
 import csv
+import sqlite3
+
+db = sqlite3.connect("MDE-Offboarder.sqlite")  # creates a new database if it doesn't exist. Otherwise, it'll open
+cur = db.cursor()
+
+cur.execute("CREATE TABLE IF NOT EXISTS offboarded (_id INTEGER PRIMARY KEY, host TEXT, machine_id TEXT, "
+            "ofb_time TEXT NOT NULL, ofb_by TEXT NOT NULL)")
 
 
 class Header:
@@ -57,62 +64,41 @@ def aad_token():
     return json_response['access_token']
 
 
-def get_machine_id(entra_token):
-    ids_to_offboard = []
-
-    tenant = config.APIkeys.tenant_id
-    get_machine_header = Header(config.APIkeys.tenant_id, config.APIkeys.app_id, config.APIkeys.app_secret,
-                          url=f"https://login.microsoftonline.com/{tenant}/oauth2/token")
-    get_machine_header.url = 'https://api-us.securitycenter.microsoft.com/api/machines'
-
-    headers = {
-        'Content-Type': get_machine_header.ACCEPT,
-        'Authorization': "Bearer " + entra_token
-    }
-
-    req = requests.get(get_machine_header.url, headers=headers)
-    response = req.text
-    json_response = json.loads(response)
-
-    for i in json_response['value']:
-        for k in strfilter:
-            if k in str(i['computerDnsName']):
-                ids_to_offboard.append(i['id'])
-    return ids_to_offboard
-
-
 def offboard():
+    update_cursor = db.cursor()
+
     initials = input("Enter your initials to claim responsibility for this action: ")
     bearer_token = aad_token()
-    machine_id_list = get_machine_id(bearer_token)
     current_dt = datetime.now()
-    
+
     headers = {
         'Content-Type': 'application/json',
         'Authorization': "Bearer " + bearer_token
     }
-    
+
     body = {
         "Comment": f"Offboarded machine by automation at {current_dt}. {initials}."
     }
-    
-    if not machine_id_list:
-        with open('devices.csv', 'r') as dfile:
-            csv_reader = csv.reader(dfile)
-            for index, row in enumerate(csv_reader):
-                if index == 1:
-                    url = f'https://api-us.securitycenter.windows.com/api/machines/{row[0]}/offboard'
-                    req = requests.post(url, headers=headers, json=body)
-                    response = req.text
-                    json_response = json.loads(response)
-                    print(json_response)
-    else:
-        for mid in machine_id_list:
-            url = f'https://api-us.securitycenter.windows.com/api/machines/{mid}/offboard'
-            req = requests.post(url, headers=headers, json=body)
-            response = req.text
-            json_response = json.loads(response)
-            print(json_response)
+
+    with open('devices.csv', 'r') as dfile:
+        csv_reader = csv.reader(dfile)
+        for index, csv_row in enumerate(csv_reader):
+            hostname = csv_row[1]
+            device_id = csv_row[0]
+            if index != 0:
+                url = f'https://api-us.securitycenter.windows.com/api/machines/{row[0]}/offboard'
+                req = requests.post(url, headers=headers, json=body)
+                response = req.text
+                json_response = json.loads(response)
+                if 'error' in json_response:
+                    print(f"[+] ERROR '{json_response['error']['message']}' detected on {hostname}")
+                else:
+                    print(f"Request posted for {hostname}\nRequest ID: {json_response['id']}\n"
+                          f"Status: {json_response['status']}")
+                    update_sql = "INSERT INTO offboarded(host, machine_id, ofb_time, ofb_by) VALUES(?, ?, ?, ?)"
+                    update_cursor.execute(update_sql, (hostname, device_id, current_dt, initials))
+                    db.commit()
+                    cur.close()
 
 
 if __name__ == "__main__":
@@ -128,5 +114,4 @@ if __name__ == "__main__":
     for k in strfilter:
         print(f"\t- {k}")
     new_token = aad_token()
-    print(get_machine_id(new_token))
     offboard()
