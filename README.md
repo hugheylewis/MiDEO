@@ -19,5 +19,4 @@ The only package required to be installed is `dotenv`, a Python module that assi
 &#96;pip install python-dotenv&#96;
 
 # Roadmap / TODO
-1.  GUI
-2.  Azure Key Vault to replace config.py and .env files (used only for local script execution)
+1.  Azure Key Vault to replace config.py and .env files (used only for local script execution)
