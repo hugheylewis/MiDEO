@@ -1,19 +1,28 @@
 from tkinter import filedialog as fd
 from datetime import datetime
 from config import config
-import sys
 import tkinter
 import json
 import requests
 import csv
 import sqlite3
 import os
+import sys
 
 
 db = sqlite3.connect("MDE-Offboarder.sqlite")  # creates a new database if it doesn't exist. Otherwise, it'll open
 cur = db.cursor()
 cur.execute("CREATE TABLE IF NOT EXISTS offboarded (_id INTEGER PRIMARY KEY, host TEXT, machine_id TEXT, "
             "ofb_time TEXT NOT NULL, ofb_by TEXT NOT NULL)")
+
+
+class StdoutRedirector:
+    def __init__(self, text_widget):
+        self.text_widget = text_widget
+
+    def write(self, message):
+        self.text_widget.insert(tkinter.END, message)
+        self.text_widget.see(tkinter.END)  # Scroll to the end
 
 
 class Header:
@@ -70,13 +79,14 @@ def azure_token():
 
 def offboard():
     machines_to_offboard = []
-    with open("devices.csv", "r") as hosts:
+    with open(file_path.name, "r") as hosts:
         reader = csv.reader(hosts, delimiter=',')
         next(reader, None)  # skips the headers
         for row in reader:
             machines_to_offboard.append(row[1])
 
     strfilter = list(filter(None, machines_to_offboard))
+    output_text_widget.delete(1.0, tkinter.END)
     print("Attempting to offboard the following machines:")
     for k in strfilter:
         print(f"\t- {k}")
@@ -95,7 +105,7 @@ def offboard():
         "Comment": f"Offboarded machine by automation at {current_dt}."
     }
 
-    with open('devices.csv', 'r') as dfile:
+    with open(file_path.name, 'r') as dfile:
         csv_reader = csv.reader(dfile)
         for index, csv_row in enumerate(csv_reader):
             hostname = csv_row[1]
@@ -117,12 +127,56 @@ def offboard():
 
 
 def openfile():
-    opened_file = fd.askopenfilename(filetypes=[("CSV Files", "*.csv")])
-    return opened_file
+    # TODO: Replace global variable with a returned function value. This is just to prove that it works
+    global file_path
+    file_path = fd.askopenfile(filetypes=[("CSV files", "*.csv")])
+    is_valid, message = validate_csv_format(file_path)
+    if file_path and is_valid:
+        input_text_widget.delete(1.0, tkinter.END)
+        input_text_widget.insert(tkinter.END, "The following hostnames will be offboarded from MDE:\n")
+        output_text_widget.insert(tkinter.END, "Ready to offboard")
+        with open(file_path.name) as twt:
+            file_data = csv.reader(twt, delimiter=',')
+            next(file_data, None)
+            counter = 1
+            for i in file_data:
+                input_text_widget.insert(tkinter.END, f"\t[{counter}] {i[1]}\n")
+                counter += 1
+    else:
+        print("CSV file is not valid:", message)
 
 
-def redirector(input_string):
-    text_widget2.insert(tkinter.INSERT, input_string)
+def validate_csv_format(csv_file_path):
+    # Define expected column names and data types
+    expected_columns = ["ï»¿Device ID", "Device Name", "Domain", "First Seen", "Last device update", "OS Platform",
+                        "OS Distribution", "OS Version", "OS Build", "Windows 10 Version", "Tags", "Group",
+                        "Is AAD Joined", "Device IPs", "Risk Level", "Exposure Level", "Health Status",
+                        "Onboarding Status", "Device Role", "Cloud Platforms", "Managed By", "Antivirus status",
+                        "Is Internet Facing"]
+    expected_data_types = [str, str, str]  # Assuming Name and City are strings, and Age is an integer
+
+    # Open the CSV file
+    with open(csv_file_path.name, 'r') as file:
+        csv_reader = csv.reader(file)
+        headers = next(csv_reader)  # Read the header row
+        if headers != expected_columns:
+            return False, f"Column names do not match the expected format. Names: {headers}"
+
+        # Validate each row
+        line_number = 2  # Start from the second line (after the header)
+        for row in csv_reader:
+            if len(row) != len(expected_columns):
+                return False, f"Row {line_number}: Incorrect number of columns."
+
+            for i, (value, expected_type) in enumerate(zip(row, expected_data_types)):
+                try:
+                    expected_type(value)  # Attempt to convert value to expected data type
+                except ValueError:
+                    return False, f"Row {line_number}, Column {expected_columns[i]}: Invalid data type."
+
+            line_number += 1
+
+    return True, "CSV file conforms to the specified format."
 
 
 main_window = tkinter.Tk()
@@ -130,7 +184,7 @@ main_window = tkinter.Tk()
 main_window.title("MDE Offboarder")   # title of the window
 main_window.geometry('800x480-8-200')    # size of the window plus the offsets
 
-input_text_label = tkinter.Label(main_window, text="CSV File Input")# label for the window, first takes the window then the text as its arguments
+input_text_label = tkinter.Label(main_window, text="CSV File Input")
 input_text_label.grid(row=0, column=1)
 leftFrame = tkinter.Frame(main_window)
 leftFrame.grid(row=1, column=1)
@@ -138,16 +192,15 @@ leftFrame.grid(row=1, column=1)
 canvas = tkinter.Canvas(leftFrame, borderwidth=1)
 canvas.grid(row=2, column=0)
 
-text_widget1 = tkinter.Text(canvas, height=10)
-text_widget1.grid(row=0, column=0, pady=(1, 20))
+input_text_widget = tkinter.Text(canvas, height=10)
+input_text_widget.grid(row=0, column=0, pady=(1, 35))
 output_text_label = tkinter.Label(main_window, text="Offboarding Status")
 output_text_label.grid(row=1, column=1, pady=(1, 5))
-text_widget2 = tkinter.Text(canvas, height=10)
-text_widget2.grid(row=2, column=0)
-with open('devices.csv') as twt:
-    file_data = twt.readlines()
-for i in file_data:
-    text_widget1.insert(tkinter.END, i)
+output_text_widget = tkinter.Text(canvas, height=10)
+output_text_widget.grid(row=2, column=0)
+
+
+input_text_widget.insert(tkinter.END, 'Click "Open" and select a valid CSV file')
 
 
 rightFrame = tkinter.Frame(main_window)
@@ -167,9 +220,6 @@ main_window.columnconfigure(1, weight=1)
 main_window.columnconfigure(2, weight=1)
 
 # initializing and starting the main window loop
-
-
 if __name__ == "__main__":
-    # TODO: Redirect text output from STDOUT to GUI
-    # sys.stdout.write = redirector
+    sys.stdout = StdoutRedirector(output_text_widget)
     main_window.mainloop()
