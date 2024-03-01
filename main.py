@@ -1,13 +1,12 @@
-from datetime import datetime
-from config import config
 import json
 import requests
 import csv
 import sqlite3
+from datetime import datetime
+from config import config
 
 db = sqlite3.connect("MDE-Offboarder.sqlite")  # creates a new database if it doesn't exist. Otherwise, it'll open
 cur = db.cursor()
-
 cur.execute("CREATE TABLE IF NOT EXISTS offboarded (_id INTEGER PRIMARY KEY, host TEXT, machine_id TEXT, "
             "ofb_time TEXT NOT NULL, ofb_by TEXT NOT NULL)")
 
@@ -44,7 +43,7 @@ class Header:
             self._url = new_url
 
 
-def aad_token():
+def azure_token():
     tenant = config.APIkeys.tenant_id
     token_header = Header(config.APIkeys.tenant_id, config.APIkeys.app_id, config.APIkeys.app_secret,
                           url=f"https://login.microsoftonline.com/{tenant}/oauth2/token")
@@ -65,10 +64,21 @@ def aad_token():
 
 
 def offboard():
+    machines_to_offboard = []
+    with open("devices.csv", "r") as hosts:
+        reader = csv.reader(hosts, delimiter=',')
+        next(reader, None)  # skips the headers
+        for row in reader:
+            machines_to_offboard.append(row[1])
+
+    strfilter = list(filter(None, machines_to_offboard))
+    print("Attempting to offboard the following machines:")
+    for k in strfilter:
+        print(f"\t- {k}")
     update_cursor = db.cursor()
 
     initials = input("Enter your initials to claim responsibility for this action: ")
-    bearer_token = aad_token()
+    bearer_token = azure_token()
     current_dt = datetime.now()
 
     headers = {
@@ -86,7 +96,7 @@ def offboard():
             hostname = csv_row[1]
             device_id = csv_row[0]
             if index != 0:
-                url = f'https://api-us.securitycenter.windows.com/api/machines/{row[0]}/offboard'
+                url = f'https://api-us.securitycenter.windows.com/api/machines/{csv_row[0]}/offboard'
                 req = requests.post(url, headers=headers, json=body)
                 response = req.text
                 json_response = json.loads(response)
@@ -102,16 +112,4 @@ def offboard():
 
 
 if __name__ == "__main__":
-    machines_to_offboard = []
-    with open("devices.csv", "r") as hosts:
-        reader = csv.reader(hosts, delimiter=',')
-        next(reader, None)  # skips the headers
-        for row in reader:
-            machines_to_offboard.append(row[1])
-
-    strfilter = list(filter(None, machines_to_offboard))
-    print("Attempting to offboard the following machines:")
-    for k in strfilter:
-        print(f"\t- {k}")
-    new_token = aad_token()
     offboard()
