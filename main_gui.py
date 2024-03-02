@@ -217,7 +217,14 @@ def offboard_single_device_window():
 
         for i in json_response['value']:
             device_id = i['id']
-            single_device_offboard_status.insert(tkinter.END, device_id)
+            last_ip = i['lastIpAddress']
+            os_platform = i['osPlatform']
+            all_known_ips = i['ipAddresses']
+            single_device_offboard_status.insert(tkinter.END, f"Hostname: {device_hostname}\nDevice ID: "
+                                                              f"{device_id}\nLast Known IP: {last_ip}\nOS: "
+                                                              f"{os_platform}\nAll Known IPs: \n")
+            for ip in all_known_ips:
+                single_device_offboard_status.insert(tkinter.END, f"\tIP: {ip['ipAddress']}\n\tMAC: {ip['macAddress']}\n\n")
             return device_hostname, device_id
 
     def offboard_single_device():
@@ -241,9 +248,11 @@ def offboard_single_device_window():
         response = req.text
         json_response = json.loads(response)
         if 'error' in json_response:
+            single_device_offboard_status.delete(1.0, tkinter.END)
             single_device_offboard_status.insert(tkinter.END, f"[-] ERROR '{json_response['error']['message']}"
                                                               f"' detected on {device_hostname}\n")
         else:
+            single_device_offboard_status.delete(1.0, tkinter.END)
             single_device_offboard_status.insert(tkinter.END, f"Request posted for {device_hostname}\nRequest ID: "
                                                               f"{json_response['id']}\nStatus: "
                                                               f"{json_response['status']}")
@@ -254,13 +263,14 @@ def offboard_single_device_window():
         pass
 
     win = tkinter.Toplevel()
-    win.geometry('400x240')
+    win.geometry('515x270')
     win.title('Offboard Single Device')
     tkinter.Label(win, text="Offboard a single device from MDE").grid(row=0, column=0, sticky='w')
     entry = tkinter.Entry(win)
     entry.grid(row=1, column=0, padx=(5, 0), sticky='w')
-    tkinter.Button(win, text='Offboard', width=10, command=get_single_device).grid(row=1, column=1, sticky='w')
-    single_device_offboard_status = tkinter.Text(win, height=5, width=45)
+    tkinter.Button(win, text='Offboard', width=10, command=offboard_single_device).grid(row=1, column=1, sticky='w')
+    tkinter.Button(win, text='Get Info', width=10, command=get_single_device).grid(row=1, column=0, padx=(50, 0))
+    single_device_offboard_status = tkinter.Text(win, height=8, width=60)
     single_device_offboard_status.grid(row=2, column=0, columnspan=2, padx=(5, 0), pady=(10, 0))
     tkinter.Button(win, text='Done', width=10, command=win.destroy).grid(row=4, column=0, padx=(125, 0), pady=(25, 0))
 
