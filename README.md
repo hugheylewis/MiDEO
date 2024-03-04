@@ -1,4 +1,4 @@
-# mde-offboarder
+# MiDEO
 A Python script to automate the offboarding of devices from Microsoft Defender for Endpoint (MDE)
 
 This implementation currently takes an exported CSV file from Defender for Endpoint (security.microsoft.com) as the input and will offboard <b>all machines in that file</b>.<br>
