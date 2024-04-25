@@ -17,6 +17,7 @@ cur.execute("CREATE TABLE IF NOT EXISTS offboarded (_id INTEGER PRIMARY KEY, hos
 
 
 class StdoutRedirector:
+    """Redirects output from STDOUT to tkinter widget"""
     def __init__(self, text_widget):
         self.text_widget = text_widget
 
@@ -254,12 +255,12 @@ def offboard_single_device_window():
         if 'error' in json_response:
             single_device_offboard_status.delete(1.0, tkinter.END)
             single_device_offboard_status.insert(tkinter.END, f"[-] ERROR '{json_response['error']['message']}"
-                                                              f"' detected on {device_hostname}\n")
+                                                              f"' detected on {device_hostname}\n\n")
         else:
             single_device_offboard_status.delete(1.0, tkinter.END)
             single_device_offboard_status.insert(tkinter.END, f"Request posted for {device_hostname}\nRequest ID: "
                                                               f"{json_response['id']}\nStatus: "
-                                                              f"{json_response['status']}")
+                                                              f"{json_response['status']}\n\n")
             update_sql = "INSERT INTO offboarded(host, machine_id, ofb_time, ofb_by) VALUES(?, ?, ?, ?)"
             update_cursor.execute(update_sql, (device_hostname, device_id, current_dt, run_by))
             db.commit()
